@@ -1,8 +1,7 @@
 let mongoose = require("mongoose");
 
-//  Article Schema
+// Article Schema
 let articleSchema = mongoose.Schema({
-  // Define the fields
   title: {
     type: String,
     required: true,
