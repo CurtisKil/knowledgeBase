@@ -2,6 +2,9 @@ const express = require("express");
 const path = require("path");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const expressValidator = require("express-validator");
+const session = require("express-session");
+const flash = require("connect-flash");
 // const mongo = require("mongodb");
 
 // Connect Mongoose Database
@@ -38,6 +41,49 @@ app.use(bodyParser.json());
 // Set Public Folder
 app.use(express.static(path.join(__dirname, "public")));
 
+// Express Messages Middleware
+app.use(require("connect-flash")());
+app.use(function (req, res, next) {
+  res.locals.messages = require("express-messages")(req, res);
+  next();
+});
+
+// Express Session Middleware
+app.use(
+  session({
+    secret: "keyboard cat",
+    resave: true,
+    saveUninitialized: true,
+  })
+);
+
+// Express Messages Middleware
+app.use(require("connect-flash")());
+app.use(function (req, res, next) {
+  res.locals.messages = require("express-messages")(req, res);
+  next();
+});
+
+// Express Validator Middleware
+app.use(
+  expressValidator({
+    errorFormatter: function (param, msg, value) {
+      var namespace = param.split("."),
+        root = namespace.shift(),
+        formParam = root;
+
+      while (namespace.length) {
+        formParam += "[" + namespace.shift() + "]";
+      }
+      return {
+        param: formParam,
+        msg: msg,
+        value: value,
+      };
+    },
+  })
+);
+
 // Home Route
 app.get("/", function (req, res) {
   // Grabbing all the articles from the db
@@ -54,86 +100,9 @@ app.get("/", function (req, res) {
   });
 });
 
-// Get Single Article
-app.get("/article/:id", function (req, res) {
-  // To get the id that's in the url use req.params
-  Article.findById(req.params.id, function (err, article) {
-    res.render("article", {
-      article: article,
-    });
-  });
-});
-
-// Add an Article
-app.get("/articles/add", function (req, res) {
-  res.render("add_article", {
-    title: "Add Article",
-  });
-});
-
-// Add Submit POST Route
-// This route and the above route can have the same url as long as they are different types of requests(post/get)
-app.post("/articles/add", function (req, res) {
-  // Get the posts and submit them to the database
-  console.log(req.body);
-  let article = new Article();
-  article.title = req.body.title;
-  article.author = req.body.author;
-  article.body = req.body.body;
-
-  article.save(function (err) {
-    if (err) {
-      console.log(err);
-      return;
-    } else {
-      // Redirect post to homepage
-      res.redirect("/");
-    }
-  });
-});
-
-// Load Edit Form
-app.get("/article/edit/:id", function (req, res) {
-  Article.findById(req.params.id, function (err, article) {
-    res.render("edit_article", {
-      article: article,
-    });
-  });
-});
-
-// Update route is very similar to add route
-// Update Submit Post Route
-app.post("/articles/edit/:id", function (req, res) {
-  // Get the posts and submit them to the database
-  let article = {};
-  article.title = req.body.title;
-  article.author = req.body.author;
-  article.body = req.body.body;
-
-  let query = { _id: req.params.id };
-
-  Article.update(query, article, function (err) {
-    if (err) {
-      console.log(err);
-      return;
-    } else {
-      // Redirect post to homepage
-      res.redirect("/");
-    }
-  });
-});
-
-// Delete Route
-app.delete("/article/:id", function (req, res) {
-  let query = { _id: req.params.id };
-
-  Article.remove(query, function (err) {
-    if (err) {
-      console.log(err);
-    }
-    res.send("Success");
-  });
-});
+// Bring In Route Files
+let articles = require("./routes/articles");
+app.use("/articles", articles);
 
 // Start Server
 app.listen(3000, function () {
